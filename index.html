@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Dónde dejo la liquidez?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: plano técnico de Blueprint. Perfil arriba (botones segmentados), resultado en vivo debajo como lámina, comparativa y "esto no es liquidez" al final. */
+:root{
+  --paper:#f6f8fb; --sheet:#ffffff; --ink:#0f2747; --muted:#5a6b82; --line:#d5deea; --grid:rgba(30,80,160,.06);
+  --accent:#1d5fd1; --accent-soft:rgba(29,95,209,.09); --good:#1b7f5a; --good-soft:rgba(27,127,90,.1); --warn:#b4560f; --warn-soft:rgba(180,86,15,.09);
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0b1a30; --sheet:#10233f; --ink:#e7eef9; --muted:#9db0c9; --line:#25406a; --grid:rgba(140,180,255,.07);
+  --accent:#7fb0ff; --accent-soft:rgba(127,176,255,.12); --good:#5fd3a0; --good-soft:rgba(95,211,160,.12); --warn:#f2a660; --warn-soft:rgba(242,166,96,.12); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0b1a30; --sheet:#10233f; --ink:#e7eef9; --muted:#9db0c9; --line:#25406a; --grid:rgba(140,180,255,.07);
+  --accent:#7fb0ff; --accent-soft:rgba(127,176,255,.12); --good:#5fd3a0; --good-soft:rgba(95,211,160,.12); --warn:#f2a660; --warn-soft:rgba(242,166,96,.12); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 56px}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(32px,6vw,48px);line-height:1.05;margin:6px 0 10px;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--display);font-weight:700;font-size:20px;margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.lead{max-width:62ch;color:var(--muted);margin:0}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:22px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.form{display:flex;flex-direction:column;gap:20px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field-label{display:flex;gap:10px;align-items:baseline}
+.field-label .n{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.field-label b{font-weight:600}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.opt{border:1px solid var(--line);background:transparent;border-radius:6px;padding:8px 14px;text-align:left;display:flex;flex-direction:column;gap:1px;font-size:14px}
+.opt small{font-size:12px;color:var(--muted)}
+.opt[aria-pressed="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.opt[aria-pressed="true"] small{color:inherit;opacity:.75}
+.hint{font-size:13px;color:var(--muted);margin:0;max-width:66ch}
+/* result */
+.res-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline}
+.profile{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.cards{display:flex;flex-direction:column;gap:12px}
+.card{border:1px solid var(--line);background:var(--sheet);border-radius:6px;overflow:hidden}
+.card.top{border:1.5px solid var(--accent)}
+.chead{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.card.top .chead{background:var(--accent-soft)}
+.rank{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.cname{font-family:var(--display);font-weight:800;font-size:clamp(20px,3.6vw,26px);letter-spacing:-.01em;margin:2px 0 0}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:4px;padding:3px 8px;white-space:nowrap}
+.tag.g{border-color:transparent;background:var(--good-soft);color:var(--good)}
+.tag.w{border-color:transparent;background:var(--warn-soft);color:var(--warn)}
+.cbody{padding:16px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px 24px}
+.cbody>div{min-width:0}
+.cbody p{margin:0;font-size:14px}
+.cbody .warn{color:var(--warn)}
+.empty{padding:18px 20px;border:1px dashed var(--line);border-radius:6px;color:var(--muted)}
+.callout{padding:12px 16px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 4px 4px 0;font-size:14px;margin:0}
+/* table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--paper)}
+tr:last-child td{border-bottom:none}
+td.cur{font-family:var(--mono);font-size:12px;color:var(--muted)}
+tr.grp td{background:var(--paper);font-family:var(--display);font-weight:700;font-size:13px}
+/* not liquidity */
+.nots{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.not{border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.not b{font-weight:600}
+.not p{margin:0;font-size:14px;color:var(--muted)}
+.x{font-family:var(--mono);font-size:12px;color:var(--warn)}
+footer{font-size:12px;color:var(--muted);max-width:72ch}
+@media (max-width:680px){.cbody{grid-template-columns:1fr}.sheet{padding:18px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Blueprint Financiero · Herramientas prácticas</div>
+    <h1>¿Dónde dejo la liquidez?</h1>
+    <p class="lead">Liquidez es la plata que podés usar el día que la necesitás, sin que haya perdido valor justo ese día. Contestá cinco preguntas y te mostramos qué instrumentos encajan con tu caso y por qué.</p>
+  </header>
+
+  <section class="sheet form" aria-label="Tu perfil">
+    <div class="field">
+      <div class="field-label"><span class="n">01</span><b>¿En qué moneda está la plata?</b></div>
+      <div class="seg" data-q="moneda">
+        <button class="opt" data-v="ars">Pesos</button>
+        <button class="opt" data-v="usd">Dólares</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="n">02</span><b>¿Para qué es?</b></div>
+      <div class="seg" data-q="obj">
+        <button class="opt" data-v="em">Fondo de emergencia<small>Imprevistos: salud, trabajo, auto</small></button>
+        <button class="opt" data-v="pol">Pólvora seca<small>Para comprar en caídas del mercado</small></button>
+        <button class="opt" data-v="gas">Un gasto con fecha<small>Viaje, cuota, compra planificada</small></button>
+        <button class="opt" data-v="ren">Que rinda mientras tanto<small>Sin uso definido todavía</small></button>
+      </div>
+      <p class="hint" id="obj-hint"></p>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="n">03</span><b>¿Cuándo la podés necesitar?</b></div>
+      <div class="seg" data-q="plazo">
+        <button class="opt" data-v="hoy">En el día</button>
+        <button class="opt" data-v="mes">Dentro de 1 a 30 días</button>
+        <button class="opt" data-v="sem">Dentro de 1 a 6 meses</button>
+        <button class="opt" data-v="lar">En más de 6 meses</button>
+      </div>
+    </div>
+    <div class="field" id="field-acc">
+      <div class="field-label"><span class="n">04</span><b>¿Dónde invertís?</b></div>
+      <div class="seg" data-q="acc">
+        <button class="opt" data-v="local">Broker o banco argentino</button>
+        <button class="opt" data-v="ext">Tengo cuenta en el exterior</button>
+      </div>
+    </div>
+    <div class="field">
+      <div class="field-label"><span class="n" id="n-vol">05</span><b>¿Te molesta ver el saldo bajar unos días?</b></div>
+      <div class="seg" data-q="vol">
+        <button class="opt" data-v="0">Sí, no quiero ver rojo<small>Solo instrumentos que no fluctúan</small></button>
+        <button class="opt" data-v="1">Un poco está bien<small>Si al final rinde más</small></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="form" aria-live="polite">
+    <div class="res-head">
+      <h2>Qué encaja con tu caso</h2>
+      <span class="profile" id="profile"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+    <p class="callout" id="extra" hidden></p>
+  </section>
+
+  <section class="sheet form">
+    <div>
+      <h2>Esto no es liquidez</h2>
+      <p class="lead">Rinden o protegen, pero pueden estar abajo justo el día que necesitás la plata.</p>
+    </div>
+    <div class="nots">
+      <div class="not"><span class="x">No es liquidez</span><b>Acciones "defensivas"</b><p>MCD, PEP, KO. Son buenas empresas, pero en una crisis caen junto con el mercado, que es justo cuando querés usar la plata para comprar.</p></div>
+      <div class="not"><span class="x">No es liquidez</span><b>Bonos largos y soberanos en dólares</b><p>Bonares, Globales o un bono a 10 años pueden perder mucho precio si sube el riesgo país o las tasas, aunque al final paguen todo.</p></div>
+      <div class="not"><span class="x">No es liquidez</span><b>Bitcoin y cripto</b><p>Caídas de 30% o más en semanas son habituales. Es una inversión, no un colchón.</p></div>
+      <div class="not"><span class="x">No es liquidez</span><b>FCI de renta variable o mixtos</b><p>El nombre dice "fondo", pero adentro hay acciones o bonos largos. Fijate siempre en qué invierte.</p></div>
+    </div>
+  </section>
+
+  <section class="form">
+    <div>
+      <h2>Todos los instrumentos</h2>
+      <p class="lead">La tasa de cada uno cambia todos los días, consultala en tu broker antes de invertir.</p>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Instrumento</th><th>Liquidez</th><th>Riesgo</th><th>¿Fluctúa?</th><th>Protege contra</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </section>
+
+  <footer>Material educativo de Blueprint Financiero. Muestra qué instrumentos suelen encajar con cada perfil, no es una recomendación personalizada de inversión. Antes de invertir revisá condiciones, plazos de rescate y tasa vigente con tu broker o banco.</footer>
+</div>
+
+<script>
+const L={hoy:"En el día",mes:"1 a 30 días",sem:"1 a 6 meses",lar:"Más de 6 meses"};
+const I=[
+ {id:"cta",cur:"ars",name:"Cuenta remunerada",liq:"Inmediata",risk:"Muy bajo",vol:0,acc:"local",prot:"Parcial contra la inflación",plazos:["hoy","mes"],w:{em:3,pol:1,gas:1,ren:0},
+  how:"Billeteras virtuales y bancos digitales. La plata rinde sola, sin hacer nada.",
+  watch:"La tasa es variable y suele quedar por debajo de la inflación. Revisá el tope de saldo que remunera.",
+  why:{em:"Está disponible al instante, todos los días, sin trámites.",pol:"Disponible ya, pero en pesos.",gas:"Sirve para plazos muy cortos.",ren:"Rinde poco frente a otras opciones."}},
+ {id:"mm",cur:"ars",name:"FCI money market",liq:"Inmediata (con tope diario)",risk:"Muy bajo",vol:0,acc:"local",prot:"Parcial contra la inflación",plazos:["hoy","mes","sem","lar"],w:{em:3,pol:2,gas:1,ren:1},
+  how:"Desde cualquier broker o banco. Suscribís y rescatás cuando quieras.",
+  watch:"Algunos fondos limitan el rescate inmediato a un monto por día. Mirá el reglamento.",
+  why:{em:"Rescate en el día y prácticamente sin fluctuación.",pol:"Lo rescatás en el día para comprar.",gas:"Bueno mientras faltan algunas semanas.",ren:"Base segura, aunque rinde menos que tasa fija."}},
+ {id:"cau",cur:"ars",name:"Caución colocadora",liq:"Al vencimiento (1 a 30 días)",risk:"Muy bajo",vol:0,acc:"local",prot:"Parcial contra la inflación",plazos:["mes"],w:{em:0,pol:1,gas:3,ren:1},
+  how:"En tu broker, elegís el plazo en días y la tasa queda fija.",
+  watch:"No se puede cortar antes del vencimiento. Elegí un plazo que termine antes de que necesites la plata.",
+  why:{em:"La plata queda trabada hasta el vencimiento.",pol:"Sirve a 1 día y la vas renovando.",gas:"Ajustás el plazo justo a la fecha del gasto, con tasa conocida.",ren:"Tasa fija de corto plazo, renovable."}},
+ {id:"pf",cur:"ars",name:"Plazo fijo",liq:"Al vencimiento (30 días o más)",risk:"Muy bajo",vol:0,acc:"local",prot:"Parcial contra la inflación",plazos:["mes","sem","lar"],w:{em:0,pol:0,gas:2,ren:1},
+  how:"Home banking de tu banco, mínimo 30 días.",
+  watch:"No se puede cancelar antes. La garantía de depósitos cubre hasta un tope.",
+  why:{em:"Queda trabado 30 días.",pol:"Queda trabado 30 días.",gas:"Simple y con tasa conocida si la fecha cae a más de 30 días.",ren:"Opción simple, aunque las LECAPs suelen pagar más."}},
+ {id:"lecap",cur:"ars",name:"LECAPs / BONCAPs",liq:"Se venden en el día, precio de mercado",risk:"Bajo (Tesoro nacional)",vol:1,acc:"local",prot:"Inflación, si la tasa fija le gana",plazos:["sem","lar"],w:{em:0,pol:0,gas:3,ren:3},
+  how:"En tu broker, comprás la que vence cerca de la fecha que necesitás la plata.",
+  watch:"Si la vendés antes del vencimiento el precio puede estar abajo. Llevala hasta el final.",
+  why:{em:"Si vendés en un mal día, perdés.",pol:"El precio puede estar abajo justo cuando querés comprar.",gas:"Elegís la que vence antes de la fecha: tasa fija y sabés cuánto vas a tener.",ren:"Suelen pagar más que plazo fijo o money market."}},
+ {id:"cer",cur:"ars",name:"Bonos CER cortos",liq:"Se venden en el día, precio de mercado",risk:"Bajo (Tesoro nacional)",vol:1,acc:"local",prot:"Inflación",plazos:["lar"],w:{em:0,pol:0,gas:2,ren:3},
+  how:"En tu broker. El capital se ajusta por inflación (CER) más una tasa.",
+  watch:"El precio se mueve con las expectativas de inflación. Pensalo para más de 6 meses.",
+  why:{em:"Fluctúa, no sirve para imprevistos.",pol:"Fluctúa, no sirve para comprar en caídas.",gas:"Si el gasto sube con la inflación, te cubre.",ren:"Protege el poder de compra en plazos largos."}},
+ {id:"usdc",cur:"usd",name:"Dólares en cuenta",liq:"Inmediata",risk:"Muy bajo",vol:0,acc:"both",prot:"Devaluación del peso",plazos:["hoy"],w:{em:1,pol:3,gas:0,ren:0},
+  how:"Saldo en dólares en tu broker, sin invertir.",
+  watch:"No rinde nada. Usalo solo para lo que vas a comprar en días.",
+  why:{em:"Disponible, pero sin rendimiento.",pol:"Está en la cuenta listo para comprar en el momento.",gas:"Sin rendimiento.",ren:"No rinde nada."}},
+ {id:"mmu",cur:"usd",name:"FCI money market en dólares",liq:"En el día o T+1",risk:"Bajo",vol:0,acc:"local",prot:"Devaluación del peso",plazos:["hoy","mes","sem","lar"],w:{em:3,pol:3,gas:1,ren:1},
+  how:"En tu broker. Invierten en cauciones y plazos fijos en dólares.",
+  watch:"Rinde poco. Revisá el plazo de rescate de cada fondo.",
+  why:{em:"Dólares disponibles rápido y sin fluctuación.",pol:"Rescatás en el día y comprás. Es lo que más encaja con la herramienta VIX.",gas:"Bueno para pocas semanas.",ren:"Rinde algo sin riesgo de precio."}},
+ {id:"cauu",cur:"usd",name:"Caución en dólares",liq:"Al vencimiento (1 a 30 días)",risk:"Muy bajo",vol:0,acc:"local",prot:"Devaluación del peso",plazos:["mes"],w:{em:0,pol:2,gas:2,ren:1},
+  how:"En tu broker, en dólares MEP, eligiendo el plazo en días.",
+  watch:"La tasa suele ser baja. No se corta antes del vencimiento.",
+  why:{em:"Queda trabado hasta el vencimiento.",pol:"A 1 día, renovando, la tenés casi disponible.",gas:"Ajustás el plazo a la fecha.",ren:"Rinde poco, pero sin riesgo de precio."}},
+ {id:"pfu",cur:"usd",name:"Plazo fijo en dólares",liq:"Al vencimiento (30 días o más)",risk:"Muy bajo",vol:0,acc:"local",prot:"Devaluación del peso",plazos:["mes","sem","lar"],w:{em:0,pol:0,gas:2,ren:1},
+  how:"Home banking, mínimo 30 días.",
+  watch:"Tasas bajas y no se puede cancelar antes.",
+  why:{em:"Queda trabado 30 días.",pol:"Queda trabado 30 días.",gas:"Simple si la fecha está a más de un mes.",ren:"Simple, aunque rinde poco."}},
+ {id:"on",cur:"usd",name:"ONs cortas",liq:"Se venden en T+1, mercado a veces fino",risk:"Medio (riesgo de la empresa)",vol:1,acc:"local",prot:"Devaluación del peso",plazos:["sem","lar"],w:{em:0,pol:0,gas:2,ren:3},
+  how:"Obligaciones negociables de empresas sólidas que vencen en menos de 2 años, en tu broker.",
+  watch:"Diversificá entre varias empresas. Algunas tienen poco volumen y cuesta venderlas rápido.",
+  why:{em:"Pueden ser difíciles de vender rápido.",pol:"Pueden ser difíciles de vender rápido.",gas:"Si vence antes de la fecha, sabés cuánto cobrás.",ren:"Pagan más que un plazo fijo en dólares."}},
+ {id:"sob",cur:"usd",name:"Bonares y Globales cortos",liq:"Se venden en el día, mercado muy líquido",risk:"Medio-alto (riesgo país)",vol:1,acc:"local",prot:"Devaluación del peso",plazos:["lar"],w:{em:0,pol:0,gas:1,ren:3},
+  how:"Bonos soberanos en dólares en tu broker. Elegí los de vencimiento más corto, que se mueven menos.",
+  watch:"El precio sube y baja con el riesgo país: en una crisis local pueden caer fuerte. Es una inversión, no un colchón.",
+  why:{em:"Pueden caer justo en una crisis.",pol:"Caen junto con el mercado argentino.",gas:"Solo si la fecha está lejos y aceptás el riesgo país.",ren:"Pagan bastante más que un plazo fijo o una ON, a cambio de más volatilidad."}},
+ {id:"tb",cur:"usd",name:"T-bills o ETFs de T-bills",liq:"T+1",risk:"Muy bajo (Tesoro de EE.UU.)",vol:0,acc:"ext",prot:"Devaluación del peso",plazos:["hoy","mes","sem","lar"],w:{em:2,pol:3,gas:2,ren:2},
+  how:"En tu cuenta del exterior, letras del Tesoro de EE.UU. o ETFs como SGOV o BIL.",
+  watch:"Ojo con la comisión de tu broker y con impuestos. El precio casi no se mueve.",
+  why:{em:"Lo más seguro en dólares, se vende en el día.",pol:"Vendés y comprás acciones el mismo día en la misma cuenta.",gas:"Elegís una letra que vence antes de la fecha.",ren:"Tasa del Tesoro de EE.UU. sin riesgo de precio relevante."}}
+];
+const OBJ={em:"Prioridad: que esté siempre disponible. El rendimiento es secundario. Una referencia habitual es cubrir entre 3 y 6 meses de gastos.",
+ pol:"Es el 15% de liquidez para comprar cuando sube el VIX. Tiene que estar disponible en el día y en la moneda en que comprás.",
+ gas:"Ya sabés la fecha: buscá algo que venza justo antes y con tasa conocida.",
+ ren:"Plata sin destino todavía. Podés aceptar algo de plazo o fluctuación a cambio de más rendimiento."};
+const S={moneda:"usd",obj:"pol",plazo:"hoy",acc:"local",vol:"0"};
+const $=s=>document.querySelector(s);
+function pick(){
+  const vol=+S.vol, acc=S.moneda==="usd"?S.acc:"local";
+  let list=I.filter(i=>i.cur===S.moneda && i.plazos.includes(S.plazo) && (i.acc==="both"||i.acc===acc) && (vol||!i.vol));
+  list=list.map(i=>({i,s:i.w[S.obj]*10 + (i.plazos[0]===S.plazo?1:0)})).sort((a,b)=>b.s-a.s);
+  const good=list.filter(x=>x.i.w[S.obj]>0);
+  return (good.length?good:list).slice(0,3).map(x=>x.i);
+}
+function tag(t,c){return `<span class="tag ${c||""}">${t}</span>`}
+function render(){
+  document.querySelectorAll(".seg").forEach(g=>g.querySelectorAll(".opt").forEach(b=>b.setAttribute("aria-pressed",S[g.dataset.q]===b.dataset.v)));
+  const usd=S.moneda==="usd"; $("#field-acc").hidden=!usd; $("#n-vol").textContent=usd?"05":"04";
+  $("#obj-hint").textContent=OBJ[S.obj];
+  const objTxt=$(`[data-q="obj"] [data-v="${S.obj}"]`).childNodes[0].textContent;
+  $("#profile").textContent=[usd?"Dólares":"Pesos",objTxt,L[S.plazo],usd?(S.acc==="ext"?"Cuenta exterior":"Broker local"):null,S.vol==="0"?"Sin fluctuación":"Acepta fluctuación"].filter(Boolean).join(" · ");
+  const r=pick();
+  $("#cards").innerHTML=r.length?r.map((i,k)=>`<article class="card ${k===0?"top":""}">
+    <div class="chead"><div><div class="rank">${k===0?"Primera opción":"Alternativa "+k}</div><div class="cname">${i.name}</div></div>
+    <div class="tags">${tag("Liquidez: "+i.liq)}${tag("Riesgo: "+i.risk)}${i.vol?tag("Fluctúa","w"):tag("No fluctúa","g")}</div></div>
+    <div class="cbody"><div><h3>Por qué para vos</h3><p>${i.why[S.obj]}</p></div><div><h3>Cómo se compra</h3><p>${i.how}</p></div><div><h3>Ojo con</h3><p class="warn">${i.watch}</p></div></div>
+  </article>`).join(""):`<div class="empty">No hay un instrumento que cumpla todas las condiciones. Probá aceptando algo de fluctuación o cambiando el plazo.</div>`;
+  const ex=$("#extra");
+  if(S.obj==="pol"){ex.hidden=false;ex.innerHTML="<b>Conectalo con la Herramienta VIX y Liquidez.</b> Ahí está cuánto usar en cada nivel del VIX. Acá elegís dónde tener esa plata mientras esperás.";}
+  else if(S.obj==="em"&&S.plazo!=="hoy"){ex.hidden=false;ex.innerHTML="<b>Para un fondo de emergencia</b>, conviene que al menos una parte esté disponible en el día, aunque rinda menos.";}
+  else if(!usd&&(S.plazo==="sem"||S.plazo==="lar")){ex.hidden=false;ex.innerHTML="<b>Si vas a gastar en dólares</b>, por ejemplo un viaje, pensá si no conviene directamente dolarizar esa plata.";}
+  else ex.hidden=true;
+}
+document.querySelectorAll(".seg").forEach(g=>g.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>{S[g.dataset.q]=b.dataset.v;render();})));
+$("#tbody").innerHTML=[["ars","En pesos"],["usd","En dólares"]].map(([c,t])=>`<tr class="grp"><td colspan="5">${t}</td></tr>`+I.filter(i=>i.cur===c).map(i=>`<tr><td><b>${i.name}</b>${i.acc==="ext"?' <span class="tag">Cuenta exterior</span>':""}</td><td>${i.liq}</td><td>${i.risk}</td><td>${i.vol?"Sí":"No"}</td><td>${i.prot}</td></tr>`).join("")).join("");
+render();
+</script>
+
+</body>
+</html>
